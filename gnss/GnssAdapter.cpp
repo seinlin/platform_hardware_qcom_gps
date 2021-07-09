@@ -3470,7 +3470,8 @@ GnssAdapter::isFlpClient(LocationCallbacks& locationCallbacks)
             locationCallbacks.gnssSvCb == nullptr &&
             locationCallbacks.gnssNmeaCb == nullptr &&
             locationCallbacks.gnssDataCb == nullptr &&
-            locationCallbacks.gnssMeasurementsCb == nullptr);
+            locationCallbacks.gnssMeasurementsCb == nullptr &&
+            locationCallbacks.engineLocationsInfoCb == nullptr);
 }
 
 void
@@ -3484,12 +3485,11 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
 
     if (reportToGnssClient || reportToFlpClient) {
         GnssLocationInfoNotification locationInfo = {};
+        list<trackingCallback> cbRunnables = {};
         convertLocationInfo(locationInfo, locationExtended);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
-
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if ((reportToFlpClient && isFlpClient(it->second)) ||
-                    (reportToGnssClient && !isFlpClient(it->second))) {
+            if ((reportToGnssClient && !isFlpClient(it->second))) {
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -3506,7 +3506,22 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 } else if (nullptr != it->second.trackingCb) {
                     it->second.trackingCb(locationInfo.location);
                 }
+            } else if (reportToFlpClient && isFlpClient(it->second)) {
+                if (nullptr != it->second.trackingCb) {
+                    cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
+                        cb(location);
+                    });
+                }
             }
+        }
+
+        if (cbRunnables.size() > 0) {
+            mContext->getLBSProxyBase()->populateAltitudeAndBroadCast(locationInfo.location,
+                [ cbRunnables ] (Location location) {
+                    for (auto cb : cbRunnables) {
+                        cb(location);
+                    }
+                });
         }
 
         mGnssSvIdUsedInPosAvail = false;
