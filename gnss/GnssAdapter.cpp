@@ -3489,7 +3489,8 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
         convertLocationInfo(locationInfo, locationExtended);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if ((reportToGnssClient && !isFlpClient(it->second))) {
+            if ((reportToFlpClient && isFlpClient(it->second)) ||
+                    (reportToGnssClient && !isFlpClient(it->second))) {
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -3506,11 +3507,12 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 } else if (nullptr != it->second.trackingCb) {
                     it->second.trackingCb(locationInfo.location);
                 }
-            } else if (reportToFlpClient && isFlpClient(it->second)) {
-                if (nullptr != it->second.trackingCb) {
-                    cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
-                        cb(location);
-                    });
+                if (reportToFlpClient && isFlpClient(it->second)) {
+                    if (nullptr != it->second.trackingCb) {
+                        cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
+                            cb(location);
+                        });
+                    }
                 }
             }
         }
