@@ -3483,14 +3483,14 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
     bool reportToGnssClient = needReportForGnssClient(ulpLocation, status, techMask);
     bool reportToFlpClient = needReportForFlpClient(status, techMask);
 
-    if (reportToGnssClient || reportToFlpClient) {
+    // if (reportToGnssClient || reportToFlpClient) {
         GnssLocationInfoNotification locationInfo = {};
         list<trackingCallback> cbRunnables = {};
         convertLocationInfo(locationInfo, locationExtended);
         convertLocation(locationInfo.location, ulpLocation, locationExtended, techMask);
         for (auto it=mClientData.begin(); it != mClientData.end(); ++it) {
-            if ((reportToFlpClient && isFlpClient(it->second)) ||
-                    (reportToGnssClient && !isFlpClient(it->second))) {
+            // if ((reportToFlpClient && isFlpClient(it->second)) ||
+            //         (reportToGnssClient && !isFlpClient(it->second))) {
                 if (nullptr != it->second.gnssLocationInfoCb) {
                     it->second.gnssLocationInfoCb(locationInfo);
                 } else if ((nullptr != it->second.engineLocationsInfoCb) &&
@@ -3507,6 +3507,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 } else if (nullptr != it->second.trackingCb) {
                     it->second.trackingCb(locationInfo.location);
                 }
+
                 if (reportToFlpClient && isFlpClient(it->second)) {
                     if (nullptr != it->second.trackingCb) {
                         cbRunnables.emplace_back([ cb=it->second.trackingCb ] (Location location) {
@@ -3514,7 +3515,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                         });
                     }
                 }
-            }
+            // }
         }
 
         if (cbRunnables.size() > 0) {
@@ -3552,7 +3553,7 @@ GnssAdapter::reportPosition(const UlpLocation& ulpLocation,
                 }
             }
         }
-    }
+    // }
 
     if (NMEA_PROVIDER_AP == ContextBase::mGps_conf.NMEA_PROVIDER &&
         !mTimeBasedTrackingSessions.empty()) {
